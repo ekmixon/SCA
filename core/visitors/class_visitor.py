@@ -40,10 +40,10 @@ class ClassVisitor(BaseVisitor):
     def visit(self, node, state):
         stoponthis = False
         newobj = None
-        
+
         # global parent scope
         parentscope = self.locate_scope(node, state)
-        
+
         if not getattr(node, '_object', False):
             # Start traveling node when instance is created
             node._parent_scope = parentscope
@@ -53,23 +53,25 @@ class ClassVisitor(BaseVisitor):
             # new instance has been created
             # Create new Scope and push it onto the stack
             newscope = Scope(node, parent_scope=parentscope, is_root=True)
-            
+
             # add builtins to scope
-            newscope._builtins = dict(
-                    ((uv, VariableDef(uv, -1, newscope)) for uv in VariableDef.USER_VARS))
-                            
+            newscope._builtins = {
+                uv: VariableDef(uv, -1, newscope) for uv in VariableDef.USER_VARS
+            }
+
+
             state.scopes.append(newscope)
-            
+
             newobj = Obj(node.name, node.lineno, newscope, node._object_var, ast_node=node)
-            
+
             # create $this var for internal method calling
             this_var = VariableDef('$this', node.lineno, newscope)
             this_var._obj_def = newobj
             newscope.add_var(this_var)
-            
+
             # add ObjDef to VarDef, this way we can trace method call back to the correct instance
             node._object_var._obj_def = newobj            
-            
+
             node._scope = newscope
             state.objects[node._object_var.name] = node._object_var
 

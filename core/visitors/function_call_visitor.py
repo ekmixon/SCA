@@ -45,17 +45,16 @@ class FunctionCallVisitor(BaseVisitor):
         name = getattr(node, 'name', node.__class__.__name__.lower())
         currscope = self.locate_scope(node, state)
         newobj = FuncCall(name, node.lineno, node, currscope)
-        
+
         # Evaluate custom function
         if functionObj:
-            
+
             # Set function scope as active code
             functionObj._scope._dead_code = False
-            
+
             # Evaluate if vulnerable (this state will be overridden upon new function call)
             for funccall in functionObj._scope.get_functions():
-                vulntype = funccall.is_vulnerable_for()
-                if vulntype:
+                if vulntype := funccall.is_vulnerable_for():
                     funccall.add_vulntrace(vulntype)
-                
+
         return newobj, True

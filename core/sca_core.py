@@ -26,18 +26,17 @@ import phply.phpast as phpast
 Node = phpast.Node
 
 def accept(nodeinst, visitor):
-    skip = visitor(nodeinst)  
-    if skip:
+    if skip := visitor(nodeinst):
         return
 
     for field in nodeinst.fields:
         value = getattr(nodeinst, field)
-        
+
         if isinstance(value, Node):
             # Add parent
             value._parent_node = nodeinst
             value.accept(visitor)
-        
+
         elif isinstance(value, list):
             for item in value:            
                 if isinstance(item, Node):
@@ -138,19 +137,16 @@ class PhpSCA(object):
     
     def get_vars(self, usr_controlled=False):
         filter_tainted = (lambda v: v.controlled_by_user) if usr_controlled \
-                            else (lambda v: 1)
-        all_vars = filter(filter_tainted, self.state.scopes[0].get_all_vars())
-        
-        return all_vars
+                                else (lambda v: 1)
+        return filter(filter_tainted, self.state.scopes[0].get_all_vars())
     
     def get_objects(self):
         return self.state.objects
     
     def get_func_calls(self, vuln=False):
         filter_vuln = (lambda f: len(f._vulntraces)) if vuln \
-                        else (lambda f: True)
-        funcs = filter(filter_vuln, self.state.functions)
-        return funcs
+                            else (lambda f: True)
+        return filter(filter_vuln, self.state.functions)
     
     def _visitor(self, node):
         '''
@@ -158,18 +154,17 @@ class PhpSCA(object):
         method (Visitor Design Pattern)
         '''
         nodety = type(node)
-        
+
         for visitor in self.VISITORS:
             if visitor.should_visit(nodety, node, self.state):
-                
+
                 newobj, stoponthis = visitor.visit(node, self.state)
-                
+
                 self.debug(newobj)
-                    
+
                 return stoponthis
-        else:
-            self.debug('There is no visitor for "%s"' % node)
-            
+        self.debug('There is no visitor for "%s"' % node)
+
         return False
     
     def debug(self, newobj):

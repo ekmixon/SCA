@@ -46,7 +46,7 @@ class FuncCall(NodeRep):
     def get_called_obj(self):
         if type(self.ast_node) is phpast.MethodCall:
             return None
-        
+
         state = self._scope.get_state()
         if self.name in state.functions_declarations:
             return state.functions_declarations[self.name]
@@ -95,8 +95,7 @@ class FuncCall(NodeRep):
     
     def is_vulnerable_for(self):
         vulntys = []
-        possvulnty = get_vulnty_for(self.name)
-        if possvulnty:
+        if possvulnty := get_vulnty_for(self.name):
             for vars in (p.vars for p in self._params if p.vars):
                 for v in vars:
                     if v.controlled_by_user and v.is_tainted_for(possvulnty):
@@ -126,16 +125,18 @@ class FuncCall(NodeRep):
             return None
         var_name = self.ast_node.node.name
         var = self._scope.get_var(var_name)
-        class_name = var.ast_node.name
-        return class_name
+        return var.ast_node.name
         
     def __repr__(self):
         return "<'%s' call at line %s in '%s'>" % (self._name, self._lineno, self.get_file_name())
     
     def __str__(self):
-        return "Line %s in '%s'. '%s' function call. Vulnerable%s" % \
-            (self.lineno, self.get_file_name(), self.name, self.vulntypes and 
-             ' for %s.' % ','.join(self.vulntypes) or ': No.')
+        return "Line %s in '%s'. '%s' function call. Vulnerable%s" % (
+            self.lineno,
+            self.get_file_name(),
+            self.name,
+            self.vulntypes and f" for {','.join(self.vulntypes)}." or ': No.',
+        )
     
     def _parse_params(self):
         def attrname(node):

@@ -44,8 +44,7 @@ class TestSamate(object):
     def _from_xml_get_test_cases(self):
         xp = XMLParser()
         parser = etree.XMLParser(target=xp)
-        test_cases = etree.fromstring(file(self.SAMATE_MANIFEST).read(), parser)
-        return test_cases
+        return etree.fromstring(file(self.SAMATE_MANIFEST).read(), parser)
     
     def test_samate_generator(self):
         for test_case in self._from_xml_get_test_cases():
@@ -55,18 +54,20 @@ class TestSamate(object):
         for input_file_obj in test_case.files:
             input_file_name = os.path.join(self.SAMATE_TEST_DIR, input_file_obj.file)
             analyzer = PhpSCA(infile=input_file_name)
-            
+
             identified_vulns = []
-            
+
             for vuln_type in analyzer.get_vulns():
-                for vuln_func_call in analyzer.get_vulns()[vuln_type]:
-                    identified_vulns.append((vuln_type, vuln_func_call[0]._lineno))
-            
-            expected_vulns = []
-            for flaw in input_file_obj.flaws:
-                sca_name = SAMATE_TO_SCA[flaw.vuln_name]
-                expected_vulns.append((sca_name, int(flaw.vuln_line_no)))
-            
+                identified_vulns.extend(
+                    (vuln_type, vuln_func_call[0]._lineno)
+                    for vuln_func_call in analyzer.get_vulns()[vuln_type]
+                )
+
+            expected_vulns = [
+                (SAMATE_TO_SCA[flaw.vuln_name], int(flaw.vuln_line_no))
+                for flaw in input_file_obj.flaws
+            ]
+
             #print set(expected_vulns), set(identified_vulns)
             assert set(expected_vulns) == set(identified_vulns)
 
@@ -78,7 +79,7 @@ class XMLTestCase(object):
         self.files = []
     
     def __repr__(self):
-        return 'XMLTestCase for id %s' % self.test_id
+        return f'XMLTestCase for id {self.test_id}'
 
 class TestFile(object):
     flaws = []
@@ -93,7 +94,7 @@ class Flaw(object):
         self.vuln_line_no = vuln_line_no
 
     def __str__(self):
-        return '%s at line number %s' % (self.vuln_name, self.vuln_line_no)
+        return f'{self.vuln_name} at line number {self.vuln_line_no}'
     
 class XMLParser:
     tests = []

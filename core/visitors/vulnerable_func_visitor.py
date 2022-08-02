@@ -86,28 +86,26 @@ class VulnerableFuncVisitor(BaseVisitor):
 
         # Don't process custom functions until function call
         if name not in state.functions_declarations:
-            
+
             # new function call
             newobj = FuncCall(name, node.lineno, node, currentscope, self)
             state.functions.append(newobj)
-            
-            # Evaluate if vulnerable, if true add trace
-            vulntype = newobj.is_vulnerable_for()
-            if vulntype:
+
+            if vulntype := newobj.is_vulnerable_for():
                 newobj.add_vulntrace(vulntype)     
-            
+
             # add vuln trace of pending trace (from param)
             if getattr(newobj,'_pending_trace', None):
                 newobj.add_vulntrace(trace = newobj._pending_trace)
                 newobj._pending_trace = None
-                            
+
             # add function to root scope.
             currentscope.get_root_scope().add_function(newobj)
-            
+
             # Travel other files if include or require
             if type(node) in (phpast.Include, phpast.Require):
                 self.parse_include_require(node, state, currentscope)
-        
+
         return newobj, True
 
         

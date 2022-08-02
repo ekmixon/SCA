@@ -36,7 +36,7 @@ class FormalParameterVisitor(BaseVisitor):
         currscope = self.locate_scope(node, state)
         newobj = VariableDef(node.name, node.lineno, currscope, ast_node = node)
         currscope.add_var(newobj)
-        
+
         # If method add
         if type(node._parent_node) is phpast.Method:
             method_name = node._parent_node.name
@@ -46,5 +46,5 @@ class FormalParameterVisitor(BaseVisitor):
         elif type(node._parent_node) is phpast.Function:
             function_name = node._parent_node.name
             state.functions_declarations[function_name].add_formal_param(newobj)
-        
+
         return None, False

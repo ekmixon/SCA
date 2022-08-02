@@ -42,24 +42,26 @@ class FunctionVisitor(BaseVisitor):
     def visit(self, node, state):
         # global parent scope
         parentscope = self.locate_scope(node, state)  
-        
+
         # Create new Scope and push it onto the stack
         newscope = Scope(node, parent_scope=parentscope, is_root=True)
-        
+
         # add builtins to scope
-        newscope._builtins = dict(
-                ((uv, VariableDef(uv, -1, newscope)) for uv in VariableDef.USER_VARS))
-        
+        newscope._builtins = {
+            uv: VariableDef(uv, -1, newscope) for uv in VariableDef.USER_VARS
+        }
+
+
         # Don't trigger vulnerabilities in this scope untill code is no longer dead
         newscope._dead_code = True
-        
+
         state.scopes.append(newscope)
-        
+
         node._scope = newscope
-       
+
         # create Function object
         newobj = Function(node.name, node.lineno, newscope, ast_node=node)
-        
+
         # Store custom function
         state.functions_declarations[node.name] = newobj         
 

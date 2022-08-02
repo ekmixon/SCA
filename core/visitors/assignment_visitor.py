@@ -58,18 +58,18 @@ class AssignmentVisitor(BaseVisitor):
         currscope = self.locate_scope(node, state)
         varnode = node.node
         var_name = varnode.name
-        
+
         # Store object properties (vars, class variables) as $this->property
         # otherwise $a->var and $b->var overwrite each other (both stored as $var).
         if type(node.node) is phpast.ObjectProperty:
-            var_name = node.node.node.name + '->' + varnode.name
+            var_name = f'{node.node.node.name}->{varnode.name}'
 
         # Create var
         newobj = VariableDef(var_name, varnode.lineno, currscope, ast_node=node.expr)
         node._obj = newobj
-        
+
         currscope.add_var(newobj)
-        
+
         # New object property? Also add var to parent scope (if not exist)
         if type(node.node) is phpast.ObjectProperty:
             root_scope = currscope.get_root_scope()._parent_scope
@@ -78,7 +78,7 @@ class AssignmentVisitor(BaseVisitor):
                 property = VariableDef(var_name, varnode.lineno, currscope, ast_node=node.expr)
                 property.parents = [newobj]
                 root_scope.add_var(property)
- 
+
         # Overwrite object property
         if type(node.node) is phpast.ObjectProperty:
             # link this var to object property
@@ -86,7 +86,7 @@ class AssignmentVisitor(BaseVisitor):
             if type(root_scope._ast_node) is phpast.Method:
                 # link this var to property
                 root_scope._parent_scope.get_var(var_name).parents = [newobj]
-         
+
         # Object creation
         if type(node.expr) is phpast.New and node.expr.name in state.classes:
             # Start ast travel class Node

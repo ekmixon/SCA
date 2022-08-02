@@ -92,11 +92,7 @@ class Scope(object):
         useful to get param vars
         '''
         varname = varname.replace('$', '\$')
-        matches = []
-        for v in self._vars:
-            if re.search(r'%s'%varname, v):
-                matches.append(self._vars[v])
-        return matches
+        return [self._vars[v] for v in self._vars if re.search(f'{varname}', v)]
     
     def get_var(self, varname, requestvar = None):
         var = self._vars.get(varname, None) or self._builtins.get(varname)
@@ -138,4 +134,4 @@ class Scope(object):
         return scope.state
     
     def __repr__(self):
-        return "<Scope [%s]>" % ', '.join(v.name for v in self.get_all_vars())
+        return f"<Scope [{', '.join((v.name for v in self.get_all_vars()))}]>"

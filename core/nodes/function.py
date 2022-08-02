@@ -24,7 +24,7 @@ from core.nodes.node_rep import NodeRep
 class Function(NodeRep):
     def __init__(self, name, lineno, scope, ast_node=None):
         NodeRep.__init__(self, name, lineno, ast_node=ast_node)
-        
+
         self._scope = scope
         # return statements are stored as VariableDef
         self._return_vars = []

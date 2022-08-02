@@ -39,21 +39,21 @@ class MethodCallVisitor(BaseVisitor):
     def visit(self, node, state):
         currscope = self.locate_scope(node, state)
         method_name = getattr(node, 'name', node.__class__.__name__.lower())
-                    
+
         # Get object
         if node.node.name == '$this':
             object = currscope.get_root_scope()._parent_scope.obj
         else:    
             object = state.objects[node.node.name]._obj_def
-        
+
         method = object.get_method(method_name)
-        
+
         # clean formal params to avoid false positives
         method.clean_formal_params()
-        
+
         # keep track of the methods being traveled
         state.methods_deep.append(method)
-        
+
         # Start ast travel method Node
         if method._parsed is False:
             method._parsed = True
@@ -61,20 +61,20 @@ class MethodCallVisitor(BaseVisitor):
 
         # Create funccall (parses the params)            
         newobj = FuncCall(method_name, node.lineno, node, currscope)
-        
+
         # Add method object to call for easy reference
         newobj._method = method
-        
+
         # Keep track of what methods are called within this method
         currscope.get_root_scope().add_method_call(newobj)
-                    
+
         # Set method scope as active code
         method_scope = object.get_method(method_name)._scope
         method_scope._dead_code = False
-        
+
         # Evaluate all raised methodcalls when all methods have been traveled
         if state.methods_deep[0] is method:
-            
+
             # 1.We need to link all params and formal params together
             # all traveled methods
             for method0 in state.methods_deep:
@@ -86,25 +86,23 @@ class MethodCallVisitor(BaseVisitor):
                         formal_param._controlled_by_user = None
                         formal_param.is_root = False
                         formal_param.parents = param.vars
-                                           
+
             # 2.Determine vulnerabilities
             for method0 in state.methods_deep:
                 for method_call1 in method0._scope.get_method_calls():
                     method_scope = method_call1._method._scope
                     for funccall in method_scope.get_functions():
-                        vulntype = funccall.is_vulnerable_for()
-                        if vulntype: 
+                        if vulntype := funccall.is_vulnerable_for():
                             funccall.add_vulntrace(vulntype)
                     # clean formal params to avoid false positives
                     method_call1._method.clean_formal_params()
-                    
+
             # 3.Determine vulnerabilities for current method
             for funccall in method._scope.get_functions():
-                vulntype = funccall.is_vulnerable_for()
-                if vulntype: 
+                if vulntype := funccall.is_vulnerable_for():
                     funccall.add_vulntrace(vulntype)
-            
+
             # reset method call stack
             state.methods_deep = []
-            
+
         return newobj, True

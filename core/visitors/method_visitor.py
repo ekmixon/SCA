@@ -36,34 +36,34 @@ class MethodVisitor(BaseVisitor):
     def visit(self, node, state):
         stoponthis = False
         newobj = None
-    
-        # Methodes are not traveled untill called, this enables us to call methods from within methods
-        method = node._parent_node._object_var._obj_def.get_method(node.name)
-        if method:
+
+        if method := node._parent_node._object_var._obj_def.get_method(node.name):
             # Method object was already created, travel the children           
             state.scopes.append(method._scope)
         else:
             # Create method so we can travel childres nodes when called
-            parentscope = self.locate_scope(node, state) 
+            parentscope = self.locate_scope(node, state)
             # Create new Scope and push it onto the stack
             newscope = Scope(node, parent_scope=parentscope, is_root=True)
             # node seen
             node._seen = True
             # add builtins to scope
-            newscope._builtins = dict(
-                    ((uv, VariableDef(uv, -1, newscope)) for uv in VariableDef.USER_VARS))            
+            newscope._builtins = {
+                uv: VariableDef(uv, -1, newscope) for uv in VariableDef.USER_VARS
+            }
+
             # Don't trigger vulnerabilities in this scope untill code is no longer dead
             newscope._dead_code = True
-            
+
             state.scopes.append(newscope)
-            
+
             newobj = Method(node.name, node.lineno, newscope, ast_node=node)
-            
+
             node._scope = newscope
-            
+
             # add this method to object
             node._parent_node._object_var._obj_def.add_method(newobj)
-            
+
             # Stop parsing children nodes
             stoponthis = True
 

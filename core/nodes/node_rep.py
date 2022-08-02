@@ -65,8 +65,7 @@ class NodeRep(object):
                 if type(val) is list:
                     for el in val:
                         el._parent_node = node
-                        for ele in NodeRep.parse(el, currlevel+1, maxlevel, 0):
-                            yield ele
+                        yield from NodeRep.parse(el, currlevel+1, maxlevel, 0)
     
     @property
     def lineno(self):

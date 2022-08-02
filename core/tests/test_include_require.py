@@ -39,27 +39,43 @@ class TestScope(PyMockTestCase):
         self.assertRaises(ValueError, self.scope.add_var, None)
     
     def test_include_require_1(self):
-        
+
         analyzer = PhpSCA(infile = os.path.join(self.TEST_DIR, '1', 'a.php'))
-        
+
         echo = analyzer.get_func_calls()[1]
         self.assertTrue('XSS' in echo.vulntypes)
         #self.assertEquals('core/tests/test_include_require/1/a.php', echo.get_file_name())
-        self.assertEquals('core' + os.sep + 'tests' + os.sep + 'test_include_require' + os.sep + '1' + os.sep + 'a.php', echo.get_file_name())
-        
+        self.assertEquals(
+            f'core{os.sep}tests{os.sep}test_include_require{os.sep}1{os.sep}a.php',
+            echo.get_file_name(),
+        )
+
+
         vulns = analyzer.get_vulns()
-        self.assertEquals('core' + os.sep + 'tests' + os.sep + 'test_include_require' + os.sep + '1' + os.sep + 'b.php', vulns['XSS'][0][-1].get_file_name())
+        self.assertEquals(
+            f'core{os.sep}tests{os.sep}test_include_require{os.sep}1{os.sep}b.php',
+            vulns['XSS'][0][-1].get_file_name(),
+        )
+
         self.assertEquals(2, vulns['XSS'][0][-1].lineno)
     
     def test_include_require_2(self):
-        
+
         analyzer = PhpSCA(infile = os.path.join(self.TEST_DIR, '2', 'a.php'))
-        
+
         echo = analyzer.get_func_calls()[1]
         self.assertTrue('XSS' in echo.vulntypes)
-        self.assertEquals('core' + os.sep + 'tests' + os.sep + 'test_include_require' + os.sep + '2' + os.sep + 'b.php', echo.get_file_name())
-        
+        self.assertEquals(
+            f'core{os.sep}tests{os.sep}test_include_require{os.sep}2{os.sep}b.php',
+            echo.get_file_name(),
+        )
+
+
         vulns = analyzer.get_vulns()
-        self.assertEquals('core' + os.sep + 'tests' + os.sep + 'test_include_require' + os.sep + '2' + os.sep + 'a.php', vulns['XSS'][0][-1].get_file_name())
+        self.assertEquals(
+            f'core{os.sep}tests{os.sep}test_include_require{os.sep}2{os.sep}a.php',
+            vulns['XSS'][0][-1].get_file_name(),
+        )
+
         self.assertEquals(2, vulns['XSS'][0][-1].lineno)
         

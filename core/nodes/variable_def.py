@@ -34,9 +34,9 @@ class VariableDef(NodeRep):
     USER_VARS = ('$_GET', '$_POST', '$_COOKIES', '$_REQUEST')
     
     def __init__(self, name, lineno, scope, ast_node=None):
-        
+
         NodeRep.__init__(self, name, lineno, ast_node=ast_node)
-        
+
         # Containing Scope.
         self._scope = scope
         # Parent VariableDef
@@ -65,11 +65,7 @@ class VariableDef(NodeRep):
         its ancestor's name is in USER_VARS
         '''
         if self._is_root is None:
-            if not self.parents:
-                self._is_root = True
-            else:
-                self._is_root = False
-         
+            self._is_root = not self.parents
         return self._is_root
      
     @is_root.setter
@@ -83,29 +79,28 @@ class VariableDef(NodeRep):
         '''
         if self._is_root:
             return None
-        
+
         if not self._parents: 
             # Function calls - add return values of functions as parents
             self.funccall_nodes = funccall_nodes = self._get_ancestor_funccalls(self._ast_node)
             for n in funccall_nodes:
                 if hasattr(n, '_obj'):
-                    called_obj = n._obj.get_called_obj()
-                    if called_obj:
+                    if called_obj := n._obj.get_called_obj():
                         for var in called_obj._return_vars:
                             self._parents.append(var)
-            
+
             # Variables
             self.var_nodes = varnodes = self._get_ancestor_vars(self._ast_node)
             if varnodes:
                 for varnode in varnodes:
                     if getattr(varnode,'_parent_node', None) \
-                    and type(varnode._parent_node) is phpast.ObjectProperty \
-                    and varnode.name == '$this':
-                        name = varnode.name + '->' + varnode._parent_node.name
+                        and type(varnode._parent_node) is phpast.ObjectProperty \
+                        and varnode.name == '$this':
+                        name = f'{varnode.name}->{varnode._parent_node.name}'
                         parent_var = self._scope.get_root_scope()._parent_scope.get_var(name)
                         if self != parent_var:
                             self._parents.append(self._scope.get_root_scope()._parent_scope.get_var(name))
-                            
+
                     # All other vars
                     # We should not set ourself as parent
                     parent_var = self._scope.get_var(varnode.name)
@@ -125,25 +120,22 @@ class VariableDef(NodeRep):
         '''
         Returns bool that indicates if this variable is tainted.
         '''
-                
+            
         #cbusr = self._controlled_by_user
         #cbusr = None # no cache
         #if cbusr is None:
         cbusr = False #todo look at this
         if self.is_root:
-            if self._name in VariableDef.USER_VARS:
-                cbusr = True
-            else:
-                cbusr = False
+            cbusr = self._name in VariableDef.USER_VARS
         else:
             # Look at parents
             for parent in self.parents:
                 # todo look at this hasattr
                 if hasattr(parent, 'controlled_by_user') and parent.controlled_by_user == True:
                     cbusr = True
-        
+
         #self._controlled_by_user = cbusr
-        
+
         return cbusr
     
     @property
@@ -158,23 +150,20 @@ class VariableDef(NodeRep):
         
         $b taint source is ['test', 'ok']
         '''
-        taintsrc = self._taint_source
-        if taintsrc:
+        if taintsrc := self._taint_source:
             return taintsrc
-        else:
-            deps = list(itertools.chain((self,), self.deps()))
-            
-            vars = []
-            for item in reversed(deps):
-                if not item.is_root:
-                    for node in item.var_nodes:
-                        vars.append(node)
-            
-            sources = []
-            for v in vars:
-                if hasattr(v, '_parent_node') and type(v._parent_node) is phpast.ArrayOffset:
-                    sources.append(v._parent_node.expr)
-            return sources
+        deps = list(itertools.chain((self,), self.deps()))
+
+        vars = []
+        for item in reversed(deps):
+            if not item.is_root:
+                vars.extend(iter(item.var_nodes))
+        return [
+            v._parent_node.expr
+            for v in vars
+            if hasattr(v, '_parent_node')
+            and type(v._parent_node) is phpast.ArrayOffset
+        ]
     
     # todo remove below when finished
     @property
@@ -183,15 +172,13 @@ class VariableDef(NodeRep):
         Return the taint source for this Variable Definition if any; otherwise
         return None.
         '''
-        taintsrc = self._taint_source
-        if taintsrc:
+        if taintsrc := self._taint_source:
             return taintsrc
-        else:
-            deps = list(itertools.chain((self,), self.deps()))
-            v = deps[-2].var_node if len(deps) > 1 else None
-            if v and type(v._parent_node) is phpast.ArrayOffset:
-                return v._parent_node.expr
-            return None
+        deps = list(itertools.chain((self,), self.deps()))
+        v = deps[-2].var_node if len(deps) > 1 else None
+        if v and type(v._parent_node) is phpast.ArrayOffset:
+            return v._parent_node.expr
+        return None
     
     def __eq__(self, ovar):
         return self._scope == ovar._scope and \
@@ -224,13 +211,9 @@ class VariableDef(NodeRep):
     def is_tainted_for(self, vulnty):
         if vulnty in self._safe_for:
             return False
-        
+
         if self.parents:
-            for parent in self.parents:
-                if parent.is_tainted_for(vulnty) == True:
-                    return True
-            return False
-        
+            return any(parent.is_tainted_for(vulnty) == True for parent in self.parents)
         return True
 
     def get_root_var(self):
@@ -289,43 +272,38 @@ class VariableDef(NodeRep):
         '''
         if vars is None:
             vars = []
-        
+
         for n in NodeRep.parse(node):
             if type(node) is phpast.BinaryOp:
                 # only parse direct nodes
                 for item in NodeRep.parse(node, 0, 0, 1): 
                     self._get_ancestor_vars(item, vars, level + 1)
                 break
-            
+
             if type(n) is phpast.Variable:
                 vars.append(n)
-        
+
         if level == 0:
-            
+
             # Securing functions
             safe_for = {}
-            
+
             for n in vars:
                 # todo look at all vars
                 for fc in self._get_parent_nodes(n, [phpast.FunctionCall]):
-                
+                            
                     # Don't set custom function calls params as parent, this is done by
                     # looking at the return vars
                     if fc in self.funccall_nodes and hasattr(fc, '_obj') and fc._obj.get_called_obj():
                         vars.remove(n)
                         continue
-                    
-                    vulnty = get_vulnty_for_sec(fc.name)
-                    if vulnty:
-                        if vulnty not in safe_for:
-                            safe_for[vulnty] = 1
-                        else:
-                            safe_for[vulnty] = safe_for[vulnty] + 1
-            
+
+                    if vulnty := get_vulnty_for_sec(fc.name):
+                        safe_for[vulnty] = 1 if vulnty not in safe_for else safe_for[vulnty] + 1
             for vulnty, count in safe_for.iteritems():
                 if count == len(vars):
                     self._safe_for.append(vulnty)
-                    
+
         return vars
     
     def set_clean(self):

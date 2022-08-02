@@ -40,7 +40,7 @@ class ClassVariablesVisitor(BaseVisitor):
         currscope = self.locate_scope(node, state)
         variable = node.nodes[0]
         # set var name to $this->property
-        name = '$this->' + variable.name[1:]
+        name = f'$this->{variable.name[1:]}'
         newobj = VariableDef(name, node.lineno, currscope, ast_node = variable)
         currscope.add_var(newobj)
 

@@ -51,10 +51,14 @@ def get_vulnty_for(fname):
     
     @param fname: Function name
     '''
-    for vulnty, pvfnames in SENSITIVE_FUNCTIONS.iteritems():
-        if any(fname == pvfn for pvfn in pvfnames):
-            return vulnty
-    return None
+    return next(
+        (
+            vulnty
+            for vulnty, pvfnames in SENSITIVE_FUNCTIONS.iteritems()
+            if any(fname == pvfn for pvfn in pvfnames)
+        ),
+        None,
+    )
 
 def get_vulnty_for_sec(sfname):
     '''
@@ -62,7 +66,11 @@ def get_vulnty_for_sec(sfname):
     
     @param sfname: Securing function name 
     '''
-    for vulnty, sfnames in VALIDATION_FUNCTIONS.iteritems():
-        if any(sfname == sfn for sfn in sfnames):
-            return vulnty
-    return None
+    return next(
+        (
+            vulnty
+            for vulnty, sfnames in VALIDATION_FUNCTIONS.iteritems()
+            if any(sfname == sfn for sfn in sfnames)
+        ),
+        None,
+    )
